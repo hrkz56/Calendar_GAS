@@ -42,7 +42,7 @@
   <div class="container">
     <div class="card">
       <h1>Calendar_GAS Ver1.0</h1>
-      <div class="sub">Phase4 Final：重複防止・カテゴリ選択・カレンダー選択・月単位削除</div>
+      <div class="sub">Ver1.0：月選択・カテゴリ別テンプレート・重複防止・カレンダー登録</div>
 
       <textarea id="scheduleText" placeholder="ここへ勤務表を貼り付けてください。"></textarea>
 
@@ -50,6 +50,15 @@
         <div>
           <label for="year">対象年</label>
           <input id="year" type="number" min="2000" max="2100">
+        </div>
+        <div>
+          <label for="month">対象月</label>
+          <select id="month" style="min-width:110px;">
+            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+          </select>
         </div>
         <div>
           <label for="calendarSelect">登録先カレンダー</label>
@@ -126,6 +135,7 @@
       document.getElementById('year').value = now.getFullYear();
       document.getElementById('deleteYear').value = now.getFullYear();
       document.getElementById('deleteMonth').value = now.getMonth() + 1;
+      document.getElementById('month').value = now.getMonth() + 1;
 
       google.script.run.withSuccessHandler(function(config) {
         appConfig = config;
@@ -173,6 +183,7 @@
         .previewSchedule(
           document.getElementById('scheduleText').value,
           document.getElementById('year').value,
+          document.getElementById('month').value,
           getSelectedCategories()
         );
     }
@@ -203,6 +214,7 @@
         .registerSchedule(
           text,
           document.getElementById('year').value,
+          document.getElementById('month').value,
           getSelectedCategories(),
           getSelectedCalendarId()
         );
@@ -349,26 +361,42 @@
     }
 
     function loadSample() {
+      const m = document.getElementById('month').value || '7';
+      const work = Array.from({length: 20}, function() {
+        return m + '/ 09:00〜18:00 【仕事】早番';
+      }).join('\n');
+      const holidays = Array.from({length: 10}, function() {
+        return m + '/ 休み';
+      }).join('\n');
+
       document.getElementById('scheduleText').value =
 `【仕事】
-7/1 09:00〜18:00 【仕事】早番
-7/4 09:00〜18:00 【仕事】早番（在宅）
+${work}
 
 【休み】
-7/3 休み
+${holidays}
 
 【有給】
-7/8 有給休暇
+${m}/ 有給休暇
+${m}/ 午後休
+${m}/ 2時間休
+
+【終日】
+${m}/16 終日 資産負債入力
 
 【病院】
-7/14 17:00〜17:30 【病院】歯医者
+${m}/ 00:00〜00:00 【病院】歯医者
+
+【健康】
+${m}/ 12:00〜12:40 【健康】ジム（セミパ）
+${m}/ 00:00〜00:00 【健康】ジム（エニタイム）
 
 【美容】
-7/28 10:00〜10:30 【美容】眉毛サロン
+${m}/ 00:00〜00:00 【美容】眉毛サロン
+${m}/ 00:00〜00:00 【美容】理容室
 
 【私用】
-7/16 終日 資産負債入力
-7/21 09:00〜10:00 【私用】ディズニー`;
+${m}/ 00:00〜00:00 【私用】`;
     }
   </script>
 </body>
