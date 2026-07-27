@@ -9,13 +9,13 @@
     .card { background: #fff; border: 1px solid #dadce0; border-radius: 10px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(60,64,67,.1); }
     h1 { margin: 0 0 8px; font-size: 24px; }
     h2 { margin: 0 0 12px; font-size: 18px; }
-    .sub { color: #5f6368; margin-bottom: 16px; }
+    .sub { color: #5f6368; margin-bottom: 16px; line-height: 1.6; }
     textarea { width: 100%; height: 280px; box-sizing: border-box; padding: 12px; border: 1px solid #bdc1c6; border-radius: 6px; resize: vertical; font-family: monospace; font-size: 14px; }
     .row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-top: 12px; }
     label { display: block; font-size: 13px; color: #5f6368; margin-bottom: 4px; }
-    input[type="number"], select { padding: 9px 10px; border: 1px solid #bdc1c6; border-radius: 6px; }
+    input[type="number"], select { padding: 9px 10px; border: 1px solid #bdc1c6; border-radius: 6px; background: #fff; }
     input[type="number"] { width: 110px; }
-    select { min-width: 260px; }
+    select { min-width: 220px; }
     button { padding: 10px 18px; border: 0; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .primary { background: #1a73e8; color: #fff; }
     .success { background: #188038; color: #fff; }
@@ -36,13 +36,19 @@
     .category-grid { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 8px; }
     .category-item { display: flex; align-items: center; gap: 5px; }
     .section-label { margin-top: 14px; font-size: 13px; color: #5f6368; }
+    .color-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 16px; }
+    .color-row { display: grid; grid-template-columns: 64px 1fr 22px; align-items: center; gap: 8px; }
+    .color-row label { margin: 0; color: #202124; }
+    .color-row select { min-width: 0; width: 100%; }
+    .swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.16); }
+    .note { padding: 10px 12px; border-radius: 6px; background: #f8fafd; color: #5f6368; font-size: 13px; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <h1>Calendar_GAS Ver1.0</h1>
-      <div class="sub">Ver1.0：月選択・カテゴリ別テンプレート・重複防止・カレンダー登録</div>
+      <h1>Calendar_GAS Ver1.1</h1>
+      <div class="sub">月選択・カテゴリ別テンプレート・重複防止・25色カテゴリカラー設定</div>
 
       <textarea id="scheduleText" placeholder="ここへ勤務表を貼り付けてください。"></textarea>
 
@@ -61,7 +67,7 @@
           </select>
         </div>
         <div>
-          <label for="calendarSelect">登録先カレンダー</label>
+          <label for="calendarSelect">基準カレンダー</label>
           <select id="calendarSelect"></select>
         </div>
       </div>
@@ -77,6 +83,17 @@
     </div>
 
     <div class="card">
+      <h2>カテゴリカラー設定</h2>
+      <div class="sub">各カテゴリを25色から任意に選択できます。25色を正確に使うため、初回登録時にカテゴリ別の専用カレンダーを自動作成し、そのカレンダー色として反映します。</div>
+      <div id="colorSettingsArea" class="color-grid"></div>
+      <div class="row">
+        <button id="saveColorBtn" class="primary" onclick="saveColorSettings()">カラー設定を保存</button>
+        <span id="colorSaveStatus"></span>
+      </div>
+      <div class="note" style="margin-top:12px;">基準カレンダーごとに「ちゃっぴー｜基準カレンダー名｜カテゴリ」の専用カレンダーを必要時に自動作成します。既存の基準カレンダー内の予定は移動しません。</div>
+    </div>
+
+    <div class="card">
       <h2>月単位削除</h2>
       <div class="row">
         <div>
@@ -89,7 +106,7 @@
         </div>
         <button id="deleteBtn" class="danger" onclick="runMonthDelete()">選択カテゴリの予定を削除</button>
       </div>
-      <div class="sub" style="margin-top:10px;">Calendar_GASで作成したと判定できる予定のみ削除します。</div>
+      <div class="sub" style="margin-top:10px;">基準カレンダーと、対応するカテゴリ別専用カレンダーのCalendar_GAS作成予定を削除します。</div>
     </div>
 
     <div id="resultCard" class="card hidden">
@@ -98,9 +115,7 @@
       <div id="messages"></div>
       <div id="previewArea" class="table-wrap hidden">
         <table>
-          <thead>
-            <tr><th>No.</th><th>日付</th><th>時間</th><th>分類</th><th>タイトル</th><th>色</th><th>元の行</th></tr>
-          </thead>
+          <thead><tr><th>No.</th><th>日付</th><th>時間</th><th>分類</th><th>タイトル</th><th>色</th><th>元の行</th></tr></thead>
           <tbody id="previewBody"></tbody>
         </table>
       </div>
@@ -112,9 +127,7 @@
       <div id="registrationMessages"></div>
       <div id="registrationArea" class="table-wrap hidden">
         <table>
-          <thead>
-            <tr><th>No.</th><th>日付</th><th>時間</th><th>分類</th><th>タイトル</th><th>結果</th></tr>
-          </thead>
+          <thead><tr><th>No.</th><th>日付</th><th>時間</th><th>分類</th><th>タイトル</th><th>結果</th></tr></thead>
           <tbody id="registrationBody"></tbody>
         </table>
       </div>
@@ -140,6 +153,7 @@
       google.script.run.withSuccessHandler(function(config) {
         appConfig = config;
         renderCategories(config.categories);
+        renderColorSettings(config);
       }).getConfig();
 
       google.script.run.withSuccessHandler(renderCalendars).getAvailableCalendars();
@@ -153,6 +167,67 @@
       }).join('');
     }
 
+    function renderColorSettings(config) {
+      const options = config.colorPalette.map(function(color) {
+        return '<option value="' + escapeHtml(color.id) + '">' + escapeHtml(color.name + '  ' + color.hex) + '</option>';
+      }).join('');
+
+      document.getElementById('colorSettingsArea').innerHTML = config.categories.map(function(item) {
+        return '<div class="color-row">' +
+          '<label>' + escapeHtml(item.name) + '</label>' +
+          '<select class="category-color-select" data-category="' + escapeHtml(item.name) + '" onchange="updateColorSwatch(this)">' + options + '</select>' +
+          '<span class="swatch" data-swatch="' + escapeHtml(item.name) + '"></span>' +
+          '</div>';
+      }).join('');
+
+      config.categories.forEach(function(item) {
+        const select = document.querySelector('.category-color-select[data-category="' + cssEscape(item.name) + '"]');
+        if (select) {
+          select.value = config.categoryColorSettings[item.name];
+          updateColorSwatch(select);
+        }
+      });
+    }
+
+    function updateColorSwatch(select) {
+      if (!appConfig) return;
+      const category = select.dataset.category;
+      const color = appConfig.colorPalette.find(function(item) { return item.id === select.value; });
+      const swatch = document.querySelector('[data-swatch="' + cssEscape(category) + '"]');
+      if (swatch && color) swatch.style.backgroundColor = color.hex;
+    }
+
+    function getColorSettingsFromUi() {
+      const settings = {};
+      document.querySelectorAll('.category-color-select').forEach(function(select) {
+        settings[select.dataset.category] = select.value;
+      });
+      return settings;
+    }
+
+    function saveColorSettings() {
+      const button = document.getElementById('saveColorBtn');
+      const status = document.getElementById('colorSaveStatus');
+      button.disabled = true;
+      status.textContent = '保存中...';
+      status.className = '';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          button.disabled = false;
+          status.textContent = '保存しました。';
+          status.className = 'ok';
+          appConfig.categoryColorSettings = result.settings;
+          appConfig.categories.forEach(function(item) { item.colorId = result.settings[item.name]; });
+        })
+        .withFailureHandler(function(error) {
+          button.disabled = false;
+          status.textContent = error.message || String(error);
+          status.className = 'error';
+        })
+        .saveCategoryColorSettings(getColorSettingsFromUi(), getSelectedCalendarId());
+    }
+
     function renderCalendars(calendars) {
       document.getElementById('calendarSelect').innerHTML = calendars.map(function(item) {
         return '<option value="' + escapeHtml(item.id) + '"' + (item.isDefault ? ' selected' : '') + '>' +
@@ -161,25 +236,25 @@
     }
 
     function getSelectedCategories() {
-      return Array.from(document.querySelectorAll('input[name="category"]:checked'))
-        .map(function(item) { return item.value; });
+      return Array.from(document.querySelectorAll('input[name="category"]:checked')).map(function(item) { return item.value; });
     }
 
     function getSelectedCalendarId() {
       return document.getElementById('calendarSelect').value;
     }
 
+    function getColorForCategory(category) {
+      if (!appConfig) return null;
+      const select = document.querySelector('.category-color-select[data-category="' + cssEscape(category) + '"]');
+      const id = select ? select.value : appConfig.categoryColorSettings[category];
+      return appConfig.colorPalette.find(function(item) { return item.id === id; }) || null;
+    }
+
     function runPreview() {
       setBusy(true, 'preview');
       google.script.run
-        .withSuccessHandler(function(result) {
-          setBusy(false, 'preview');
-          renderPreview(result);
-        })
-        .withFailureHandler(function(error) {
-          setBusy(false, 'preview');
-          renderFailure(error, 'messages', 'resultCard');
-        })
+        .withSuccessHandler(function(result) { setBusy(false, 'preview'); renderPreview(result); })
+        .withFailureHandler(function(error) { setBusy(false, 'preview'); renderFailure(error, 'messages', 'resultCard'); })
         .previewSchedule(
           document.getElementById('scheduleText').value,
           document.getElementById('year').value,
@@ -190,65 +265,40 @@
 
     function runRegistration() {
       const text = document.getElementById('scheduleText').value;
-      if (!text.trim()) {
-        renderFailure({message: '勤務表を入力してください。'}, 'messages', 'resultCard');
-        return;
-      }
-      if (!getSelectedCategories().length) {
-        renderFailure({message: '登録対象カテゴリを1つ以上選択してください。'}, 'messages', 'resultCard');
-        return;
-      }
+      if (!text.trim()) { renderFailure({message: '勤務表を入力してください。'}, 'messages', 'resultCard'); return; }
+      if (!getSelectedCategories().length) { renderFailure({message: '登録対象カテゴリを1つ以上選択してください。'}, 'messages', 'resultCard'); return; }
       if (!window.confirm('選択した予定をGoogleカレンダーへ登録します。よろしいですか？')) return;
 
       setBusy(true, 'register');
       google.script.run
-        .withSuccessHandler(function(result) {
-          setBusy(false, 'register');
-          renderPreview(result.parsed);
-          renderRegistration(result);
-        })
-        .withFailureHandler(function(error) {
-          setBusy(false, 'register');
-          renderFailure(error, 'registrationMessages', 'registrationCard');
-        })
+        .withSuccessHandler(function(result) { setBusy(false, 'register'); renderPreview(result.parsed); renderRegistration(result); })
+        .withFailureHandler(function(error) { setBusy(false, 'register'); renderFailure(error, 'registrationMessages', 'registrationCard'); })
         .registerSchedule(
           text,
           document.getElementById('year').value,
           document.getElementById('month').value,
           getSelectedCategories(),
-          getSelectedCalendarId()
+          getSelectedCalendarId(),
+          getColorSettingsFromUi()
         );
     }
 
     function runMonthDelete() {
       const categories = getSelectedCategories();
-      if (!categories.length) {
-        renderFailure({message: '削除対象カテゴリを1つ以上選択してください。'}, 'deleteMessages', 'deleteCard');
-        return;
-      }
-
+      if (!categories.length) { renderFailure({message: '削除対象カテゴリを1つ以上選択してください。'}, 'deleteMessages', 'deleteCard'); return; }
       const year = document.getElementById('deleteYear').value;
       const month = document.getElementById('deleteMonth').value;
-
       if (!window.confirm(year + '年' + month + '月の選択カテゴリ予定を削除します。よろしいですか？')) return;
 
       setBusy(true, 'delete');
       google.script.run
-        .withSuccessHandler(function(result) {
-          setBusy(false, 'delete');
-          renderDeleteResult(result);
-        })
-        .withFailureHandler(function(error) {
-          setBusy(false, 'delete');
-          renderFailure(error, 'deleteMessages', 'deleteCard');
-        })
+        .withSuccessHandler(function(result) { setBusy(false, 'delete'); renderDeleteResult(result); })
+        .withFailureHandler(function(error) { setBusy(false, 'delete'); renderFailure(error, 'deleteMessages', 'deleteCard'); })
         .deleteMonthSchedule(year, month, categories, getSelectedCalendarId());
     }
 
     function setBusy(busy, mode) {
-      ['previewBtn', 'registerBtn', 'deleteBtn'].forEach(function(id) {
-        document.getElementById(id).disabled = busy;
-      });
+      ['previewBtn', 'registerBtn', 'deleteBtn'].forEach(function(id) { document.getElementById(id).disabled = busy; });
       document.getElementById('previewBtn').textContent = busy && mode === 'preview' ? '解析中...' : 'プレビュー';
       document.getElementById('registerBtn').textContent = busy && mode === 'register' ? '登録中...' : 'Googleカレンダーへ登録';
       document.getElementById('deleteBtn').textContent = busy && mode === 'delete' ? '削除中...' : '選択カテゴリの予定を削除';
@@ -256,11 +306,7 @@
 
     function renderPreview(result) {
       document.getElementById('resultCard').classList.remove('hidden');
-      document.getElementById('summary').innerHTML =
-        metric('解析', result.summary.parsed) +
-        metric('エラー', result.summary.errors) +
-        metric('警告', result.summary.warnings);
-
+      document.getElementById('summary').innerHTML = metric('解析', result.summary.parsed) + metric('エラー', result.summary.errors) + metric('警告', result.summary.warnings);
       const messages = [];
       if (result.errors.length) messages.push('<div class="error"><strong>エラー</strong><br>' + result.errors.map(formatMessage).join('<br>') + '</div>');
       if (result.warnings.length) messages.push('<div class="warning"><strong>警告</strong><br>' + result.warnings.map(formatMessage).join('<br>') + '</div>');
@@ -269,134 +315,79 @@
 
       document.getElementById('previewBody').innerHTML = result.events.map(function(event, index) {
         const time = event.allDay ? '終日' : event.start + '〜' + event.end;
-        return '<tr><td>' + (index + 1) + '</td><td>' + escapeHtml(event.date) + '</td><td>' +
-          escapeHtml(time) + '</td><td>' + escapeHtml(event.category) + '</td><td>' +
-          escapeHtml(event.title) + '</td><td>' + escapeHtml(event.color) + '</td><td>' +
+        const color = getColorForCategory(event.category);
+        const colorText = color ? color.name : '-';
+        return '<tr><td>' + (index + 1) + '</td><td>' + escapeHtml(event.date) + '</td><td>' + escapeHtml(time) + '</td><td>' +
+          escapeHtml(event.category) + '</td><td>' + escapeHtml(event.title) + '</td><td>' + escapeHtml(colorText) + '</td><td>' +
           escapeHtml(String(event.sourceLine)) + '</td></tr>';
       }).join('');
-
       document.getElementById('previewArea').classList.toggle('hidden', result.events.length === 0);
     }
 
     function renderRegistration(result) {
       const r = result.registration;
       document.getElementById('registrationCard').classList.remove('hidden');
-      document.getElementById('registrationSummary').innerHTML =
-        metric('対象', r.summary.requested) +
-        metric('登録成功', r.summary.registered) +
-        metric('重複スキップ', r.summary.skipped) +
-        metric('登録失敗', r.summary.failed);
-
-      let html = result.success
-        ? '<div class="ok">' + escapeHtml(result.message) + '</div>'
-        : '<div class="error">' + escapeHtml(result.message) + '</div>';
-
-      if (r.skipped.length) {
-        html += '<div class="warning"><strong>重複スキップ</strong><br>' +
-          r.skipped.map(function(item) { return escapeHtml(item.date + ' ' + item.title); }).join('<br>') + '</div>';
-      }
-      if (r.failed.length) {
-        html += '<div class="error"><strong>失敗内容</strong><br>' +
-          r.failed.map(function(item) { return escapeHtml(item.date + ' ' + item.title + '／' + item.message); }).join('<br>') + '</div>';
-      }
+      document.getElementById('registrationSummary').innerHTML = metric('対象', r.summary.requested) + metric('登録成功', r.summary.registered) + metric('重複スキップ', r.summary.skipped) + metric('登録失敗', r.summary.failed);
+      let html = result.success ? '<div class="ok">' + escapeHtml(result.message) + '</div>' : '<div class="error">' + escapeHtml(result.message) + '</div>';
+      if (r.skipped.length) html += '<div class="warning"><strong>重複スキップ</strong><br>' + r.skipped.map(function(item) { return escapeHtml(item.date + ' ' + item.title); }).join('<br>') + '</div>';
+      if (r.failed.length) html += '<div class="error"><strong>失敗内容</strong><br>' + r.failed.map(function(item) { return escapeHtml(item.date + ' ' + item.title + '／' + item.message); }).join('<br>') + '</div>';
       document.getElementById('registrationMessages').innerHTML = html;
 
       const rows = [];
       r.registered.forEach(function(item) { rows.push(resultRow(item, '成功')); });
       r.skipped.forEach(function(item) { rows.push(resultRow(item, '重複スキップ')); });
       r.failed.forEach(function(item) { rows.push(resultRow(item, '失敗')); });
-
-      document.getElementById('registrationBody').innerHTML = rows.map(function(row, index) {
-        return '<tr><td>' + (index + 1) + '</td>' + row + '</tr>';
-      }).join('');
+      document.getElementById('registrationBody').innerHTML = rows.map(function(row, index) { return '<tr><td>' + (index + 1) + '</td>' + row + '</tr>'; }).join('');
       document.getElementById('registrationArea').classList.toggle('hidden', r.summary.requested === 0);
     }
 
     function resultRow(item, status) {
       const time = item.allDay ? '終日' : ((item.start || '-') + (item.end ? '〜' + item.end : ''));
-      return '<td>' + escapeHtml(item.date || '-') + '</td><td>' + escapeHtml(time) + '</td><td>' +
-        escapeHtml(item.category || '-') + '</td><td>' + escapeHtml(item.title || '-') + '</td><td>' +
-        escapeHtml(status) + '</td>';
+      return '<td>' + escapeHtml(item.date || '-') + '</td><td>' + escapeHtml(time) + '</td><td>' + escapeHtml(item.category || '-') + '</td><td>' + escapeHtml(item.title || '-') + '</td><td>' + escapeHtml(status) + '</td>';
     }
 
     function renderDeleteResult(result) {
       document.getElementById('deleteCard').classList.remove('hidden');
-      document.getElementById('deleteSummary').innerHTML =
-        metric('確認', result.summary.scanned) +
-        metric('削除', result.summary.deleted) +
-        metric('対象外', result.summary.skipped) +
-        metric('失敗', result.summary.failed);
-
-      let html = result.success
-        ? '<div class="ok">月単位削除が完了しました。</div>'
-        : '<div class="error">一部の予定を削除できませんでした。</div>';
-
-      if (result.failed.length) {
-        html += '<div class="error">' + result.failed.map(function(item) {
-          return escapeHtml(item.title + '／' + item.message);
-        }).join('<br>') + '</div>';
-      }
+      document.getElementById('deleteSummary').innerHTML = metric('確認', result.summary.scanned) + metric('削除', result.summary.deleted) + metric('対象外', result.summary.skipped) + metric('失敗', result.summary.failed);
+      let html = result.success ? '<div class="ok">月単位削除が完了しました。</div>' : '<div class="error">一部の予定を削除できませんでした。</div>';
+      if (result.failed.length) html += '<div class="error">' + result.failed.map(function(item) { return escapeHtml(item.title + '／' + item.message); }).join('<br>') + '</div>';
       document.getElementById('deleteMessages').innerHTML = html;
     }
 
     function renderFailure(error, messageId, cardId) {
       document.getElementById(cardId).classList.remove('hidden');
-      document.getElementById(messageId).innerHTML =
-        '<div class="error"><strong>実行エラー</strong><br>' +
-        escapeHtml(error.message || String(error)) + '</div>';
+      document.getElementById(messageId).innerHTML = '<div class="error"><strong>実行エラー</strong><br>' + escapeHtml(error.message || String(error)) + '</div>';
     }
 
-    function metric(label, value) {
-      return '<div class="metric"><span>' + label + '</span><strong>' + value + '</strong></div>';
-    }
-
-    function formatMessage(item) {
-      return '行' + item.line + '：' + escapeHtml(item.message) + '<br><small>' + escapeHtml(item.text) + '</small>';
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-    }
+    function metric(label, value) { return '<div class="metric"><span>' + label + '</span><strong>' + value + '</strong></div>'; }
+    function formatMessage(item) { return '行' + item.line + '：' + escapeHtml(item.message) + '<br><small>' + escapeHtml(item.text) + '</small>'; }
+    function escapeHtml(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+    function cssEscape(value) { return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"'); }
 
     function loadSample() {
       const m = document.getElementById('month').value || '7';
-      const work = Array.from({length: 20}, function() {
-        return m + '/ 09:00〜18:00 【仕事】早番';
-      }).join('\n');
-      const holidays = Array.from({length: 10}, function() {
-        return m + '/ 休み';
-      }).join('\n');
+      const selected = getSelectedCategories();
+      if (!selected.length) {
+        renderFailure({message: 'サンプルを作成するカテゴリを1つ以上選択してください。'}, 'messages', 'resultCard');
+        return;
+      }
 
-      document.getElementById('scheduleText').value =
-`【仕事】
-${work}
-
-【休み】
-${holidays}
-
-【有給】
-${m}/ 有給休暇
-${m}/ 午後休
-${m}/ 2時間休
-
-【終日】
-${m}/16 終日 資産負債入力
-
-【病院】
-${m}/ 00:00〜00:00 【病院】歯医者
-
-【健康】
-${m}/ 12:00〜12:40 【健康】ジム（セミパ）
-${m}/ 00:00〜00:00 【健康】ジム（エニタイム）
-
-【美容】
-${m}/ 00:00〜00:00 【美容】眉毛サロン
-${m}/ 00:00〜00:00 【美容】理容室
-
-【私用】
-${m}/ 00:00〜00:00 【私用】`;
+      const sections = [];
+      if (selected.indexOf('仕事') !== -1) {
+        const work = Array.from({length: 20}, function() { return m + '/ 09:00〜18:00 【仕事】早番'; }).join('\n');
+        sections.push('【仕事】\n' + work);
+      }
+      if (selected.indexOf('休み') !== -1) {
+        const holidays = Array.from({length: 10}, function() { return m + '/ 休み'; }).join('\n');
+        sections.push('【休み】\n' + holidays);
+      }
+      if (selected.indexOf('有給') !== -1) sections.push('【有給】\n' + m + '/ 有給休暇\n' + m + '/ 午後休\n' + m + '/ 2時間休');
+      if (selected.indexOf('終日') !== -1) sections.push('【終日】\n' + m + '/16 終日 資産負債入力');
+      if (selected.indexOf('病院') !== -1) sections.push('【病院】\n' + m + '/ 00:00〜00:00 【病院】歯医者');
+      if (selected.indexOf('健康') !== -1) sections.push('【健康】\n' + m + '/ 12:00〜12:40 【健康】ジム（セミパ）\n' + m + '/ 00:00〜00:00 【健康】ジム（エニタイム）');
+      if (selected.indexOf('美容') !== -1) sections.push('【美容】\n' + m + '/ 00:00〜00:00 【美容】眉毛サロン\n' + m + '/ 00:00〜00:00 【美容】理容室');
+      if (selected.indexOf('私用') !== -1) sections.push('【私用】\n' + m + '/ 00:00〜00:00 【私用】');
+      document.getElementById('scheduleText').value = sections.join('\n\n');
     }
   </script>
 </body>

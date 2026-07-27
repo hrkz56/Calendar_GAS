@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Apps Scriptへ反映",
+      "type": "shell",
+      "command": "clasp push",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GitHub状態確認",
+      "type": "shell",
+      "command": "git status",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GitHubへ保存",
+      "type": "shell",
+      "command": "git add UI.html Calendar.js Code.js Config.js Parser.js appsscript.json && git diff --cached --quiet || (git commit -m \"Update Calendar_GAS\" && git push)",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

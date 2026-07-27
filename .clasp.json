@@ -1,0 +1,17 @@
+{
+  "scriptId": "1HKlbgIQpKGRKYPHrj5DuLhKCCTh-OvHhCDWtW11T_sYNObzlePpOx1mf",
+  "rootDir": "",
+  "projectId": "find . -name \".claspignore\" -o -name \".clasprc.json\"",
+  "scriptExtensions": [
+    ".js",
+    ".gs"
+  ],
+  "htmlExtensions": [
+    ".html"
+  ],
+  "jsonExtensions": [
+    ".json"
+  ],
+  "filePushOrder": [],
+  "skipSubdirectories": false
+}

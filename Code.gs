@@ -1,6 +1,6 @@
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('UI')
-    .setTitle('Calendar_GAS Ver1.0');
+    .setTitle('Calendar_GAS Ver1.1');
 }
 
 function getConfig() {
@@ -11,14 +11,18 @@ function getAvailableCalendars() {
   return listAvailableCalendars_();
 }
 
-function previewSchedule(text, selectedYear, selectedCategories) {
+function saveCategoryColorSettings(settings, baseCalendarId) {
+  return saveCategoryColorSettings_(settings, baseCalendarId);
+}
+
+function previewSchedule(text, selectedYear, selectedMonth, selectedCategories) {
   const parsed = parseSchedule(text, selectedYear);
   parsed.events = filterEventsByCategories_(parsed.events, selectedCategories);
   parsed.summary.parsed = parsed.events.length;
   return parsed;
 }
 
-function registerSchedule(text, selectedYear, selectedCategories, calendarId) {
+function registerSchedule(text, selectedYear, selectedMonth, selectedCategories, calendarId, colorSettings) {
   const parsed = parseSchedule(text, selectedYear);
   parsed.events = filterEventsByCategories_(parsed.events, selectedCategories);
   parsed.summary.parsed = parsed.events.length;
@@ -29,21 +33,17 @@ function registerSchedule(text, selectedYear, selectedCategories, calendarId) {
       message: '入力内容にエラーがあるため登録を中止しました。',
       parsed: parsed,
       registration: {
-        registered: [],
-        skipped: [],
-        failed: [],
-        summary: {
-          requested: parsed.events.length,
-          registered: 0,
-          skipped: 0,
-          failed: 0
-        }
+        registered: [], skipped: [], failed: [],
+        summary: { requested: parsed.events.length, registered: 0, skipped: 0, failed: 0 }
       }
     };
   }
 
-  const registration = registerEvents(parsed.events, calendarId);
+  if (colorSettings && typeof colorSettings === 'object') {
+    saveCategoryColorSettings_(colorSettings, calendarId);
+  }
 
+  const registration = registerEvents(parsed.events, calendarId);
   return {
     success: registration.summary.failed === 0,
     message: registration.summary.failed === 0

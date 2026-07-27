@@ -101,7 +101,7 @@ function detectHeadingCategory_(line) {
 
 function normalizeCategoryName_(raw) {
   const name = String(raw || '').trim();
-  if (name === '健康・美容' || name === '健康美容') return '美容';
+  if (name === '健康・美容' || name === '健康美容') return '健康';
   if (name === '休み・有給' || name === '休暇') return '休み';
   if (name === '有給休暇') return '有給';
   return name;
@@ -159,7 +159,7 @@ function parseScheduleLine_(line, currentCategory, baseYear, lineNo) {
     start: allDay ? '' : timeInfo.start,
     end: allDay ? '' : timeInfo.end,
     allDay: allDay,
-    color: CONFIG.CATEGORIES[category].color,
+    color: CONFIG.DEFAULT_CATEGORY_COLORS[category],
     sourceLine: lineNo,
     sourceText: line
   };
@@ -230,10 +230,12 @@ function detectCategory_(line, currentCategory) {
     }
   }
 
-  if (/有給休暇|有給/.test(line)) return '有給';
+  if (/有給休暇|午後休|2時間休|有給/.test(line)) return '有給';
   if (/休み|休日/.test(line)) return '休み';
   if (/歯医者|病院|クリニック|医院|診療/.test(line)) return '病院';
+  if (/ジム|健康/.test(line)) return '健康';
   if (/美容|眉毛サロン|理容室|美容室|サロン/.test(line)) return '美容';
+  if (/(^|[\s　])終日($|[\s　])/.test(line)) return '終日';
   if (/早番|中番|遅番|勤務|仕事/.test(line)) return '仕事';
 
   if (currentCategory && CONFIG.CATEGORIES[currentCategory]) return currentCategory;
@@ -262,7 +264,11 @@ function buildTitle_(line, category, dateInfo, timeInfo, explicitAllDay) {
   }
 
   if (category === '休み') return '休み';
-  if (category === '有給') return '有給休暇';
+  if (category === '有給') return normalizePaidLeaveTitle_(title);
+  if (category === '終日') {
+    const cleanedAllDay = stripCategoryPrefix_(title);
+    return cleanedAllDay || '終日';
+  }
 
   const prefix = CONFIG.CATEGORIES[category].titlePrefix;
   let cleaned = stripCategoryPrefix_(title);
@@ -274,6 +280,15 @@ function buildTitle_(line, category, dateInfo, timeInfo, explicitAllDay) {
   }
 
   return prefix && cleaned.indexOf(prefix) !== 0 ? prefix + cleaned : cleaned;
+}
+
+
+function normalizePaidLeaveTitle_(title) {
+  const cleaned = stripCategoryPrefix_(title);
+  if (/2時間休/.test(cleaned)) return '2時間休';
+  if (/午後休/.test(cleaned)) return '午後休';
+  if (/有給休暇|有給/.test(cleaned)) return '有給休暇';
+  return '有給休暇';
 }
 
 function stripCategoryPrefix_(title) {
@@ -349,15 +364,22 @@ function testParseSchedule() {
     '',
     '【有給】',
     '7/8 有給休暇',
+    '7/9 午後休',
+    '7/10 2時間休',
+    '',
+    '【終日】',
+    '7/16 終日 資産負債入力',
     '',
     '【病院】',
     '7/14 17:00〜17:30 【病院】歯医者',
     '',
     '【美容】',
+    '7/20 12:00〜12:40 【健康】ジム（セミパ）',
+    '',
+    '【美容】',
     '7/28 10:00〜10:30 【美容】眉毛サロン',
     '',
     '【私用】',
-    '7/16 終日 資産負債入力',
     '7/21 09:00〜10:00 【私用】ディズニー'
   ].join('\n');
 
