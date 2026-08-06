@@ -286,22 +286,57 @@
     function runMonthDelete() {
       const categories = getSelectedCategories();
       if (!categories.length) { renderFailure({message: '削除対象カテゴリを1つ以上選択してください。'}, 'deleteMessages', 'deleteCard'); return; }
+
       const year = document.getElementById('deleteYear').value;
       const month = document.getElementById('deleteMonth').value;
-      if (!window.confirm(year + '年' + month + '月の選択カテゴリ予定を削除します。よろしいですか？')) return;
+      const calendarId = getSelectedCalendarId();
 
+      setBusy(true, 'delete');
+      google.script.run
+        .withSuccessHandler(function(preview) {
+          setBusy(false, 'delete');
+          const targetCount = Number(preview && preview.summary ? preview.summary.targets : 0);
+
+          if (targetCount === 0) {
+            document.getElementById('deleteCard').classList.remove('hidden');
+            document.getElementById('deleteSummary').innerHTML = metric('確認', preview.summary.scanned) + metric('削除予定', 0) + metric('対象外', preview.summary.skipped);
+            document.getElementById('deleteMessages').innerHTML = '<div class="warning">削除対象の予定はありません。</div>';
+            return;
+          }
+
+          const message = [
+            '以下の予定を削除します。',
+            '',
+            '対象年月：' + preview.year + '年' + preview.month + '月',
+            '対象カテゴリ：' + preview.categories.join('、'),
+            '削除予定件数：' + targetCount + '件',
+            '',
+            'この操作は取り消せません。実行しますか？'
+          ].join('\n');
+
+          if (!window.confirm(message)) return;
+          executeMonthDelete_(year, month, categories, calendarId);
+        })
+        .withFailureHandler(function(error) {
+          setBusy(false, 'delete');
+          renderFailure(error, 'deleteMessages', 'deleteCard');
+        })
+        .previewMonthDelete(year, month, categories, calendarId);
+    }
+
+    function executeMonthDelete_(year, month, categories, calendarId) {
       setBusy(true, 'delete');
       google.script.run
         .withSuccessHandler(function(result) { setBusy(false, 'delete'); renderDeleteResult(result); })
         .withFailureHandler(function(error) { setBusy(false, 'delete'); renderFailure(error, 'deleteMessages', 'deleteCard'); })
-        .deleteMonthSchedule(year, month, categories, getSelectedCalendarId());
+        .deleteMonthSchedule(year, month, categories, calendarId);
     }
 
     function setBusy(busy, mode) {
       ['previewBtn', 'registerBtn', 'deleteBtn'].forEach(function(id) { document.getElementById(id).disabled = busy; });
       document.getElementById('previewBtn').textContent = busy && mode === 'preview' ? '解析中...' : 'プレビュー';
       document.getElementById('registerBtn').textContent = busy && mode === 'register' ? '登録中...' : 'Googleカレンダーへ登録';
-      document.getElementById('deleteBtn').textContent = busy && mode === 'delete' ? '削除中...' : '選択カテゴリの予定を削除';
+      document.getElementById('deleteBtn').textContent = busy && mode === 'delete' ? '確認中...' : '選択カテゴリの予定を削除';
     }
 
     function renderPreview(result) {
