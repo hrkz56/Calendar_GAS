@@ -1,5 +1,5 @@
 /**
- * Calendar_GAS Ver1.0 Phase2
+ * Calendar_GAS Ver1.1
  * 勤務表テキストをGoogleカレンダー登録用データへ変換する。
  *
  * 戻り値:
@@ -282,7 +282,6 @@ function buildTitle_(line, category, dateInfo, timeInfo, explicitAllDay) {
   return prefix && cleaned.indexOf(prefix) !== 0 ? prefix + cleaned : cleaned;
 }
 
-
 function normalizePaidLeaveTitle_(title) {
   const cleaned = stripCategoryPrefix_(title);
   if (/2時間休/.test(cleaned)) return '2時間休';
@@ -351,7 +350,7 @@ function makeError_(lineNo, text, message) {
 }
 
 /**
- * Apps Scriptエディタでの手動確認用。
+ * Apps Scriptエディタでの手動確認用サンプル。
  */
 function testParseSchedule() {
   const sample = [
@@ -373,7 +372,7 @@ function testParseSchedule() {
     '【病院】',
     '7/14 17:00〜17:30 【病院】歯医者',
     '',
-    '【美容】',
+    '【健康】',
     '7/20 12:00〜12:40 【健康】ジム（セミパ）',
     '',
     '【美容】',
