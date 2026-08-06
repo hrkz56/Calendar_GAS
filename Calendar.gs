@@ -268,7 +268,7 @@ function getEventSearchRange_(eventData) {
   };
 }
 
-function deleteEventsByMonth_(year, month, selectedCategories, calendarId) {
+function buildDeleteMonthContext_(year, month, selectedCategories, calendarId) {
   const numericYear = Number(year);
   const numericMonth = Number(month);
   if (!Number.isInteger(numericYear) || numericYear < 2000 || numericYear > 2100) {
@@ -279,45 +279,135 @@ function deleteEventsByMonth_(year, month, selectedCategories, calendarId) {
   }
 
   const selected = Array.isArray(selectedCategories) && selectedCategories.length
-    ? selectedCategories
+    ? selectedCategories.slice()
     : CONFIG.CATEGORY_ORDER.slice();
   const baseCalendar = getTargetCalendar_(calendarId);
   const calendars = [baseCalendar];
 
   selected.forEach(function(category) {
     const managed = getCategoryCalendar_(baseCalendar, category, false);
-    if (managed && !calendars.some(function(item) { return item.getId() === managed.getId(); })) calendars.push(managed);
+    if (managed && !calendars.some(function(item) { return item.getId() === managed.getId(); })) {
+      calendars.push(managed);
+    }
   });
 
-  const start = new Date(numericYear, numericMonth - 1, 1, 0, 0, 0, 0);
-  const end = new Date(numericYear, numericMonth, 1, 0, 0, 0, 0);
-  const deleted = [], skipped = [], failed = [];
+  return {
+    year: numericYear,
+    month: numericMonth,
+    categories: selected,
+    baseCalendar: baseCalendar,
+    calendars: calendars,
+    start: new Date(numericYear, numericMonth - 1, 1, 0, 0, 0, 0),
+    end: new Date(numericYear, numericMonth, 1, 0, 0, 0, 0)
+  };
+}
+
+function collectDeleteMonthTargets_(context) {
+  const targets = [];
+  const skipped = [];
   let scanned = 0;
 
-  calendars.forEach(function(calendar) {
-    const events = calendar.getEvents(start, end);
+  context.calendars.forEach(function(calendar) {
+    const events = calendar.getEvents(context.start, context.end);
     scanned += events.length;
+
     events.forEach(function(event) {
       const category = detectCategoryFromEvent_(event);
-      if (!category || selected.indexOf(category) === -1) {
-        skipped.push({ title: event.getTitle(), start: event.getStartTime(), reason: category ? '削除対象カテゴリ外です。' : 'Calendar_GAS作成予定と判定できません。' });
+      if (!category || context.categories.indexOf(category) === -1) {
+        skipped.push({
+          title: event.getTitle(),
+          start: event.getStartTime(),
+          reason: category ? '削除対象カテゴリ外です。' : 'Calendar_GAS作成予定と判定できません。'
+        });
         return;
       }
-      try {
-        deleted.push({ title: event.getTitle(), category: category, start: event.getStartTime(), calendar: calendar.getName() });
-        event.deleteEvent();
-      } catch (error) {
-        failed.push({ title: event.getTitle(), category: category, message: error && error.message ? error.message : String(error) });
-      }
+
+      targets.push({
+        event: event,
+        title: event.getTitle(),
+        category: category,
+        start: event.getStartTime(),
+        calendar: calendar.getName()
+      });
     });
+  });
+
+  return {
+    targets: targets,
+    skipped: skipped,
+    scanned: scanned
+  };
+}
+
+function previewDeleteEventsByMonth_(year, month, selectedCategories, calendarId) {
+  const context = buildDeleteMonthContext_(year, month, selectedCategories, calendarId);
+  const collected = collectDeleteMonthTargets_(context);
+
+  return {
+    year: context.year,
+    month: context.month,
+    categories: context.categories,
+    baseCalendar: {
+      id: context.baseCalendar.isMyPrimaryCalendar() ? 'primary' : context.baseCalendar.getId(),
+      name: context.baseCalendar.getName()
+    },
+    calendars: context.calendars.map(function(calendar) {
+      return {
+        id: calendar.isMyPrimaryCalendar() ? 'primary' : calendar.getId(),
+        name: calendar.getName()
+      };
+    }),
+    targets: collected.targets.map(function(item) {
+      return {
+        title: item.title,
+        category: item.category,
+        start: item.start,
+        calendar: item.calendar
+      };
+    }),
+    summary: {
+      scanned: collected.scanned,
+      targets: collected.targets.length,
+      skipped: collected.skipped.length
+    }
+  };
+}
+
+function deleteEventsByMonth_(year, month, selectedCategories, calendarId) {
+  const context = buildDeleteMonthContext_(year, month, selectedCategories, calendarId);
+  const collected = collectDeleteMonthTargets_(context);
+  const deleted = [];
+  const failed = [];
+
+  collected.targets.forEach(function(item) {
+    try {
+      deleted.push({
+        title: item.title,
+        category: item.category,
+        start: item.start,
+        calendar: item.calendar
+      });
+      item.event.deleteEvent();
+    } catch (error) {
+      failed.push({
+        title: item.title,
+        category: item.category,
+        message: error && error.message ? error.message : String(error)
+      });
+    }
   });
 
   return {
     success: failed.length === 0,
     deleted: deleted,
-    skipped: skipped,
+    skipped: collected.skipped,
     failed: failed,
-    summary: { scanned: scanned, deleted: deleted.length, skipped: skipped.length, failed: failed.length }
+    summary: {
+      scanned: collected.scanned,
+      deleted: deleted.length,
+      skipped: collected.skipped.length,
+      failed: failed.length
+    }
   };
 }
 
